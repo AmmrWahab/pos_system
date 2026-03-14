@@ -23,18 +23,22 @@ export default function ProfileSetup({ onProfileSelected }) {
   
   const [verifyForm, setVerifyForm] = useState({ password: '' });
 
-  const loadProfiles = async () => {
+  // ✅ In handleUseExisting function
+const loadProfiles = async () => {
     try {
-      setLoading(true);
-      const res = await getProfiles();
-      setProfiles(res.data || []);
+        setLoading(true);
+        const res = await getProfiles();
+        // ✅ Ensure array
+        const profilesData = Array.isArray(res.data) ? res.data : [];
+        setProfiles(profilesData);
     } catch (err) {
-      console.error('Load profiles error:', err);
-      toast.error('Failed to load profiles');
+        console.error('Load profiles error:', err);
+        toast.error('Failed to load profiles');
+        setProfiles([]);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   const handleUseExisting = async () => {
     await loadProfiles();

@@ -23,18 +23,21 @@ export default function Profiles() {
   
   const activeId = localStorage.getItem('nexus_active_profile');
 
-  const load = async () => {
+ const load = async () => {
     setLoading(true);
     try {
-      const r = await getProfiles();
-      setProfiles(r.data || []);
+        const r = await getProfiles();
+        // ✅ Ensure data is an array before setting
+        const profilesData = Array.isArray(r.data) ? r.data : [];
+        setProfiles(profilesData);
     } catch (err) {
-      console.error('Failed to load profiles:', err);
-      toast.error('Failed to load profiles');
+        console.error('Failed to load profiles:', err);
+        toast.error('Failed to load profiles: ' + (err.response?.data?.error || err.message));
+        setProfiles([]);  // ✅ Set empty array instead of null
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   useEffect(() => { load(); }, []);
 

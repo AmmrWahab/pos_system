@@ -19,29 +19,24 @@ import reportRoutes      from './routes/reports.js';
 import profileRoutes     from './routes/profiles.js';
 
 const __dirname     = path.dirname(fileURLToPath(import.meta.url));
-const PROFILES_FILE = path.join(__dirname, '../profiles.json');
-const DB_DIR        = path.join(__dirname, '../databases');
 
-// ── Ensure databases dir + default profile ────────────────────────────────────
-if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-if (!fs.existsSync(PROFILES_FILE)) {
-  const defaultDb = path.join(__dirname, '../nexuspos.db');
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify([{
-    id: 'default', name: 'Default Store', storeName: 'Nexus Store',
-    currency: 'USh', color: '#16a34a', dbPath: defaultDb,
-    linkedTo: null, createdAt: new Date().toISOString(),
-  }], null, 2));
-  console.log('✅ Created default profile');
-}
+
 
 const app  = express();
 const PORT = process.env.PORT || 5003;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174'], 
-  credentials: true 
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://pos-frontend-lime-two.vercel.app/',  // ✅ Add your Vercel URL
+        '*'  // ✅ Temporary: Allow all for testing
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],  // ✅ Allow all methods
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']  // ✅ Allow custom headers
 }));
 app.use(express.json());
 app.use(morgan('dev'));
