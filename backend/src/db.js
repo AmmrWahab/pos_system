@@ -51,15 +51,23 @@ export async function getMongoClient() {
 }
 
 export async function mongoMiddleware(req, res, next) {
-    try {
-        const client = await getMongoClient();
-        req.db = client.db();
-        next();
-    } catch (error) {
-        console.error('❌ DB middleware error:', error.message);
-        res.status(503).json({ 
-            error: 'Database connection failed',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
+  // ✅ Skip for OPTIONS requests (already handled)
+  if (req.method === 'OPTIONS') return next();
+  
+  try {
+    const client = await getMongoClient();
+    req.db = client.db();
+    next();
+  } catch (error) {
+    console.error('❌ DB middleware error:', {
+      message: error.message,
+      code: error.code,
+      path: req.path,
+      method: req.method
+    });
+    res.status(503).json({ 
+      error: 'Database connection failed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 }

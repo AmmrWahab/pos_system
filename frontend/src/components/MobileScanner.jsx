@@ -1,6 +1,6 @@
-// src/components/MobileScanner.jsx
+// src/components/MobileScanner.jsx - FIXED ✅
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';  // ✅ Only this import needed
 import Icon from './Icon';
 import toast from 'react-hot-toast';
 
@@ -17,7 +17,6 @@ export default function MobileScanner({ onScan, onClose }) {
       try {
         setScanning(true);
         
-        // Check if camera permissions are available
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error('Camera not supported in this browser');
         }
@@ -25,30 +24,32 @@ export default function MobileScanner({ onScan, onClose }) {
         // Request camera permission first
         await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         
-        // Initialize scanner
         const html5QrCode = new Html5Qrcode('reader');
         html5QrCodeRef.current = html5QrCode;
 
+        // ✅ FIXED config - REMOVED Html5QrcodeScanType reference
         const config = {
           fps: 10,
           qrbox: { width: 250, height: 250 },
           disableFlip: false,
           rememberLastUsedCamera: true,
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+          // ✅ REMOVE this line:
+          // supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
         };
 
         await html5QrCode.start(
-          { facingMode: 'environment' }, // Use back camera
+          { facingMode: 'environment' },
           config,
           (decodedText) => {
-            // ✅ Barcode successfully scanned
             console.log('📷 Barcode scanned:', decodedText);
             onScan?.(decodedText);
-            stopScanner(); // Auto-close after successful scan
+            stopScanner();
           },
           (errorMessage) => {
-            // Ignore decode errors - they happen while scanning
-            // console.log('Scan error (normal):', errorMessage);
+            // Ignore normal decode errors
+            if (!errorMessage?.includes?.('No code has been found')) {
+              console.log('Scan:', errorMessage);
+            }
           }
         );
 
