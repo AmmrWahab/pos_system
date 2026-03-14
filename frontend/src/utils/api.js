@@ -1,8 +1,9 @@
-// src/utils/api.js
 import axios from 'axios';
 
+// ✅ Use backend URL from environment variable, fallback to '/api' for local dev
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL });
 
 // Attach active profile ID to every request
 api.interceptors.request.use(cfg => {
@@ -12,7 +13,6 @@ api.interceptors.request.use(cfg => {
 });
 
 // Products
-
 export const getProducts       = (p)    => api.get('/products', { params: p });
 export const getProductByBarcode = (bc) => api.get(`/products/barcode/${encodeURIComponent(bc)}`);
 export const getProduct        = (id)   => api.get(`/products/${id}`);
@@ -46,9 +46,7 @@ export const deleteProfile  = (id)    => api.delete(`/profiles/${id}`);
 export const linkProfile    = (id,tId)=> api.post(`/profiles/${id}/link`, { targetId: tId });
 export const unlinkProfile  = (id)    => api.delete(`/profiles/${id}/link`);
 export const getProfileProducts = (id) =>
-  api.get(`/profiles/${id}/products`);  // ✅ Use 'api' instance for baseURL + headers
-
-// Add these new exports at the end of src/utils/api.js
+  api.get(`/profiles/${id}/products`);
 
 // Profile Authentication
 export const verifyProfilePassword = (profileId, password) => 
@@ -58,7 +56,6 @@ export const logoutProfile = () => {
   localStorage.removeItem('nexus_active_profile');
   localStorage.removeItem('nexus_active_profile_name');
   localStorage.removeItem('nexus_active_profile_color');
-  // Optional: Clear any cached data
   window.location.reload();
 };
 
