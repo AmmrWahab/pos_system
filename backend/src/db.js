@@ -1,63 +1,65 @@
-// src/db.js
 import { MongoClient } from 'mongodb';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROFILES_FILE = path.join(__dirname, '../profiles.json');
+const MONGO_URI = process.env.DATABASE_URL;
 
-// Read profiles.json
-function readProfiles() {
-  try {
-    return JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
+if (!MONGO_URI) {
+    console.error('❌ DATABASE_URL is not set in environment variables');
+    process.exit(1);
 }
 
-// Resolve profile → MongoDB connection URI
-export function resolveDbUri(profileId) {
-  const profiles = readProfiles();
-  let profile = profiles.find(p => p.id === profileId);
-  if (!profile) {
-    // Default URI if no profile found
-    return process.env.DATABASE_URL || 'mongodb+srv://<username>:<password>@cluster0.mongodb.net/nexuspos';
-  }
-
-  const visited = new Set();
-  while (profile.linkedTo) {
-    if (visited.has(profile.id)) break;
-    visited.add(profile.id);
-    const parent = profiles.find(p => p.id === profile.linkedTo);
-    if (!parent) break;
-    profile = parent;
-  }
-
-  return profile.mongoUri || process.env.DATABASE_URL;
-
-}
-
-// Cache for MongoClient instances
 const clientCache = new Map();
 
-// Get or create MongoClient for a profile
-export async function getMongoClient(profileId) {
-  const uri = resolveDbUri(profileId);
-  if (clientCache.has(uri)) return clientCache.get(uri);
-
-  const client = new MongoClient(uri);
-  await client.connect();
-  console.log(`✅ Connected to MongoDB → ${uri}`);
-  clientCache.set(uri, client);
-  return client;
+export async function getMongoClient() {
+    if (clientCache.has(MONGO_URI)) {
+        return clientCache.get(MONGO_URI);
+    }
+    
+    try {
+        console.log('🔗 Connecting to MongoDB...');
+        
+        // ✅ Add SSL/TLS options for Atlas + Node.js v22
+        const client = new MongoClient(MONGO_URI, {
+            serverSelectionTimeoutMS: 15000,  // 15 seconds
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 15000,
+            tls: true,
+            tlsAllowInvalidCertificates: false,
+            maxPoolSize: 10,
+            minPoolSize: 5,
+            retryWrites: true,
+            retryReads: true,
+        });
+        
+        await client.connect();
+        
+        // ✅ Test connection with ping
+        await client.db().admin().ping();
+        console.log('✅ MongoDB connected successfully');
+        
+        clientCache.set(MONGO_URI, client);
+        return client;
+    } catch (error) {
+        console.error('❌ MongoDB connection failed:', {
+            message: error.message,
+            code: error.code,
+            name: error.name
+        });
+        throw error;  // Re-throw so Render knows startup failed
+    }
 }
 
-// Middleware for Express
 export async function mongoMiddleware(req, res, next) {
-  const profileId = req.headers['x-profile-id'] || 'default';
-  req.mongoClient = await getMongoClient(profileId);
-  req.db = req.mongoClient.db(); // default DB from URI
-  next();
+    try {
+        const client = await getMongoClient();
+        req.db = client.db();
+        next();
+    } catch (error) {
+        console.error('❌ DB middleware error:', error.message);
+        res.status(503).json({ 
+            error: 'Database connection failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 }
-
