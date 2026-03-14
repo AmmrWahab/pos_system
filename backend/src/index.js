@@ -1,85 +1,96 @@
-// src/index.js
+// src/index.js - FINAL FIXED VERSION ✅
 import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
-import cors    from 'cors';
-import morgan  from 'morgan';
-import fs      from 'fs';
-import path    from 'path';
-import { fileURLToPath } from 'url';
+import cors from 'cors';
+import morgan from 'morgan';
 
 import { mongoMiddleware } from './db.js';
-
-import productRoutes     from './routes/products.js';
-import serviceRoutes     from './routes/services.js';
+import productRoutes from './routes/products.js';
+import serviceRoutes from './routes/services.js';
 import transactionRoutes from './routes/transactions.js';
-import dashboardRoutes   from './routes/dashboard.js';
-import reportRoutes      from './routes/reports.js';
-import profileRoutes     from './routes/profiles.js';
+import dashboardRoutes from './routes/dashboard.js';
+import reportRoutes from './routes/reports.js';
+import profileRoutes from './routes/profiles.js';
 
-const __dirname     = path.dirname(fileURLToPath(import.meta.url));
-
-
-
-
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 5003;
 
-// ── Middleware ───────────────────────────────────────────────────────────────
-// ✅ FIXED CORS - Production URL (NO trailing slash, NO spaces)
-app.use(cors({
-    origin: function(origin, callback) {
-        const allowedOrigins = [
-            'http://localhost:5173',
-            'http://localhost:5174',
-            'https://pos-frontend-lime-two.vercel.app',  // ✅ EXACT production URL
-        ].filter(o => o?.trim());
-        
-        if (!origin) return callback(null, true);
-        const cleanOrigin = origin.trim();
-        if (allowedOrigins.includes(cleanOrigin)) return callback(null, true);
-        
-        // Production fallback for testing (remove after testing)
-        if (process.env.NODE_ENV === 'production') {
-            console.log('⚠️ CORS: Allowing origin in production:', cleanOrigin);
-            return callback(null, true);
-        }
-        return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']
-}));
-
-// ✅ Handle OPTIONS preflight BEFORE mongoMiddleware
+// ── 🔥 CRITICAL: OPTIONS handler BEFORE everything else ──
 app.options('*', (req, res) => {
-    res.sendStatus(204);
+  console.log('✅ OPTIONS preflight handled:', req.path);
+  res.set('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.set('Access-Control-Allow-Credentials', 'true');
+  res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-profile-id');
+  res.sendStatus(204);
 });
+
+// ── CORS with Regex for Vercel Preview URLs ──
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow localhost for development
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ];
+    
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const cleanOrigin = origin.trim();
+    
+    // Exact match for localhost
+    if (allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+    
+    // ✅ Allow ANY Vercel preview URL for this project (regex pattern)
+    // Matches: https://pos-frontend-*.vercel.app
+    if (cleanOrigin?.match(/^https:\/\/pos-frontend-.*\.vercel\.app$/)) {
+      console.log('✅ CORS: Allowed Vercel preview:', cleanOrigin);
+      return callback(null, true);
+    }
+    
+    // Production fallback (remove after testing)
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️ CORS: Allowing origin in production:', cleanOrigin);
+      return callback(null, true);
+    }
+    
+    console.warn('❌ CORS blocked:', { origin: cleanOrigin });
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']
+}));
 
 app.use(express.json());
 app.use(morgan('dev'));
 
-// ✅ Skip mongoMiddleware for OPTIONS requests
+// ── Skip mongoMiddleware for OPTIONS requests ──
 app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') return next();
-    mongoMiddleware(req, res, next);
+  if (req.method === 'OPTIONS') {
+    // Already handled above, just pass through
+    return next();
+  }
+  mongoMiddleware(req, res, next);
 });
 
-// ── API Routes ──────────────────────────────────────────────────────────────
-app.use('/api/profiles',     profileRoutes);
-app.use('/api/products',     productRoutes);
-app.use('/api/services',     serviceRoutes);
+// ── API Routes ──
+app.use('/api/profiles', profileRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/services', serviceRoutes);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/dashboard',    dashboardRoutes);
-app.use('/api/reports',      reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 
-// ── Health Check Endpoint (✅ Single definition + DB test) ───────────────────
+// ── Health Check ──
 app.get('/api/health', mongoMiddleware, async (req, res) => {
   try {
-    // Test actual DB connection
     await req.db.admin().ping();
-    
     res.status(200).json({ 
       status: 'ok', 
       db: 'connected',
@@ -98,7 +109,7 @@ app.get('/api/health', mongoMiddleware, async (req, res) => {
   }
 });
 
-// ── API Index (list all endpoints) ──────────────────────────────────────────
+// ── API Index ──
 app.get('/api', (req, res) => {
   res.json({
     profiles: '/api/profiles',
@@ -111,17 +122,17 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ── Root route for browser friendly message ─────────────────────────────────
+// ── Root route ──
 app.get('/', (req, res) => {
   res.send('✅ NexusPOS backend is running! Visit /api/health to check API status.');
 });
 
-// ── 404 Handler (for undefined routes) ──────────────────────────────────────
+// ── 404 Handler ──
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
 });
 
-// ── Error handler ────────────────────────────────────────────────────────────
+// ── Error handler ──
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.stack);
   res.status(err.status || 500).json({ 
@@ -130,14 +141,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Start server ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`✅ NexusPOS API running on http://localhost:${PORT}`);
+// ── Start server ──
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ NexusPOS API running on 0.0.0.0:${PORT}`);
   console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
 });
 
-// ── Graceful shutdown ────────────────────────────────────────────────────────
-process.on('SIGINT',  async () => {
+// ── Graceful shutdown ──
+process.on('SIGINT', async () => {
   console.log('🛑 Shutting down gracefully...');
   process.exit(0);
 });
