@@ -33,7 +33,7 @@ app.use(cors({
         const allowedOrigins = [
             'http://localhost:5173',
             'http://localhost:5174',
-            'https://pos-frontend-dqj6uu91t-ammrs-projects-5e1a603d.vercel.app',  // ✅ EXACT production URL
+            'https://pos-frontend-lime-two.vercel.app',  // ✅ EXACT production URL
         ].filter(o => o?.trim());
         
         if (!origin) return callback(null, true);
