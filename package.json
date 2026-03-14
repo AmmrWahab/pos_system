@@ -1,0 +1,18 @@
+{
+  "name": "nexuspos",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "setup": "cd backend && npm install && npx prisma migrate dev --name init && node src/seed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "html5-qrcode": "^2.3.8",
+    "mongodb": "^7.1.0",
+    "mongoose": "^9.3.0"
+  }
+}

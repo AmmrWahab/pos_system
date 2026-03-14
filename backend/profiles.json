@@ -1,0 +1,22 @@
+[
+  {
+    "id": "default",
+    "name": "Default Store",
+    "storeName": "Muhammad Haseeb",
+    "currency": "Rs",
+    "color": "#16a34a",
+    "dbPath": "/home/muhammad-haseeb/Downloads/nexuspos_v2/nexuspos/backend/nexuspos.db",
+    "linkedTo": null,
+    "createdAt": "2026-03-13T16:31:01.956Z"
+  },
+  {
+    "id": "1a2cd025-3c8b-4fe9-88cc-dd83f257ce2f",
+    "name": "Main Branch",
+    "storeName": "sadiq shafiq super store",
+    "currency": "Rs",
+    "color": "#16a34a",
+    "dbPath": "/home/muhammad-haseeb/Downloads/nexuspos_v2/nexuspos/backend/databases/1a2cd025-3c8b-4fe9-88cc-dd83f257ce2f.db",
+    "linkedTo": null,
+    "createdAt": "2026-03-13T16:54:18.198Z"
+  }
+]
