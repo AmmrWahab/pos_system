@@ -27,32 +27,24 @@ const app  = express();
 const PORT = process.env.PORT || 5003;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
-// ✅ SAHI CORS Configuration
-// ✅ FIXED CORS - NO SPACES, EXACT URL
+// ✅ FIXED CORS - Production URL (NO trailing slash, NO spaces)
 app.use(cors({
     origin: function(origin, callback) {
-        // ✅ Allow localhost for development
         const allowedOrigins = [
             'http://localhost:5173',
             'http://localhost:5174',
-            'https://pos-frontend-7esbcuowa-ammrs-projects-5e1a603d.vercel.app',  // ✅ NO trailing slash, NO spaces
-        ];
+            'https://pos-frontend-dqj6uu91t-ammrs-projects-5e1a603d.vercel.app',  // ✅ EXACT production URL
+        ].filter(o => o?.trim());
         
-        // ✅ Allow requests with no origin (like mobile apps, curl, etc.)
         if (!origin) return callback(null, true);
-        
-        // ✅ Trim any accidental spaces and check
         const cleanOrigin = origin.trim();
-        if (allowedOrigins.indexOf(cleanOrigin) !== -1) {
-            return callback(null, true);
-        }
+        if (allowedOrigins.includes(cleanOrigin)) return callback(null, true);
         
-        // ✅ For production testing: allow all (REMOVE after testing)
+        // Production fallback for testing (remove after testing)
         if (process.env.NODE_ENV === 'production') {
-            console.log('⚠️ CORS: Allowing origin (production mode):', cleanOrigin);
+            console.log('⚠️ CORS: Allowing origin in production:', cleanOrigin);
             return callback(null, true);
         }
-        
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -60,16 +52,19 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']
 }));
 
-// ✅ Add explicit OPTIONS handler for preflight requests
-app.options('*', cors());
+// ✅ Handle OPTIONS preflight BEFORE mongoMiddleware
+app.options('*', (req, res) => {
+    res.sendStatus(204);
+});
 
-// ✅ Add explicit OPTIONS handler for preflight
-app.options('*', cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// MongoDB middleware (adds req.db)
-app.use(mongoMiddleware);
+// ✅ Skip mongoMiddleware for OPTIONS requests
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') return next();
+    mongoMiddleware(req, res, next);
+});
 
 // ── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/profiles',     profileRoutes);
