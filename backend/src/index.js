@@ -27,17 +27,44 @@ const app  = express();
 const PORT = process.env.PORT || 5003;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
+// ✅ SAHI CORS Configuration
+// ✅ FIXED CORS - NO SPACES, EXACT URL
 app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'https://pos-frontend-lime-two.vercel.app/',  // ✅ Add your Vercel URL
-        '*'  // ✅ Temporary: Allow all for testing
-    ],
+    origin: function(origin, callback) {
+        // ✅ Allow localhost for development
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'https://pos-frontend-7esbcuowa-ammrs-projects-5e1a603d.vercel.app',  // ✅ NO trailing slash, NO spaces
+        ];
+        
+        // ✅ Allow requests with no origin (like mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        
+        // ✅ Trim any accidental spaces and check
+        const cleanOrigin = origin.trim();
+        if (allowedOrigins.indexOf(cleanOrigin) !== -1) {
+            return callback(null, true);
+        }
+        
+        // ✅ For production testing: allow all (REMOVE after testing)
+        if (process.env.NODE_ENV === 'production') {
+            console.log('⚠️ CORS: Allowing origin (production mode):', cleanOrigin);
+            return callback(null, true);
+        }
+        
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],  // ✅ Allow all methods
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']  // ✅ Allow custom headers
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-profile-id']
 }));
+
+// ✅ Add explicit OPTIONS handler for preflight requests
+app.options('*', cors());
+
+// ✅ Add explicit OPTIONS handler for preflight
+app.options('*', cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
